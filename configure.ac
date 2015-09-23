@@ -80,17 +80,33 @@ AC_ARG_WITH(icondir, [  --with-icondir=<dir>    Look for cursor icons here],
 		     [  ICONDIR=${datadir}/icons])
 AC_SUBST([ICONDIR])
 
+AC_MSG_CHECKING([for Darwin (Mac OS X) platform])
+AS_CASE([$host],
+            [*darwin*], [platform_darwin=yes],
+                [platform_darwin=no]
+                )
+AC_MSG_RESULT([$platform_darwin])
+AM_CONDITIONAL(PLATFORM_DARWIN, [test "x$platform_darwin" = "xyes"])
+
 if test "x$enable_libraries" = "xyes"; then
 	PKG_CHECK_MODULES(FFI, [libffi])
-	AC_CHECK_DECL(SFD_CLOEXEC,[],
-		      [AC_MSG_ERROR("SFD_CLOEXEC is needed to compile wayland libraries")],
-		      [[#include <sys/signalfd.h>]])
-	AC_CHECK_DECL(TFD_CLOEXEC,[],
-		      [AC_MSG_ERROR("TFD_CLOEXEC is needed to compile wayland libraries")],
-		      [[#include <sys/timerfd.h>]])
-	AC_CHECK_DECL(CLOCK_MONOTONIC,[],
-		      [AC_MSG_ERROR("CLOCK_MONOTONIC is needed to compile wayland libraries")],
-		      [[#include <time.h>]])
+    AS_IF([test "x$platform_darwin" != xno], [
+        AC_CHECK_DECL(EVFILT_SIGNAL,[],
+                  [AC_MSG_ERROR("EVFILT_SIGNAL is needed to compile wayland libraries")],
+                  [[#include <sys/event.h>]])
+        AC_MSG_RESULT([Building for osx will currently fail])
+    ], [
+        AC_CHECK_DECL(SFD_CLOEXEC,[],
+                  [AC_MSG_ERROR("SFD_CLOEXEC is needed to compile wayland libraries")],
+                  [[#include <sys/signalfd.h>]])
+        AC_CHECK_DECL(TFD_CLOEXEC,[],
+                  [AC_MSG_ERROR("TFD_CLOEXEC is needed to compile wayland libraries")],
+                  [[#include <sys/timerfd.h>]])
+        AC_CHECK_DECL(CLOCK_MONOTONIC,[],
+                  [AC_MSG_ERROR("CLOCK_MONOTONIC is needed to compile wayland libraries")],
+                  [[#include <time.h>]])
+    ]
+    )
 	AC_CHECK_HEADERS([execinfo.h])
 fi
 
