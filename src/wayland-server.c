@@ -70,6 +70,14 @@ struct wl_socket {
 	char *display_name;
 };
 
+#ifdef __MACH__
+struct ucred {
+    uint32_t pid;
+    uint32_t uid;
+    uint32_t gid;
+};
+#endif
+
 struct wl_client {
 	struct wl_connection *connection;
 	struct wl_event_source *source;
@@ -430,9 +438,21 @@ wl_client_create(struct wl_display *display, int fd)
 		goto err_client;
 
 	len = sizeof client->ucred;
+#ifdef __MACH__
+    uid_t uid;
+    gid_t gid;
+    if (getpeereid(fd, &uid, &gid) < 0)
+        goto err_source;
+
+    client->ucred.pid = 0;
+    client->ucred.uid = uid;
+    client->ucred.gid = gid;
+
+#else
 	if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED,
 		       &client->ucred, &len) < 0)
 		goto err_source;
+#endif
 
 	client->connection = wl_connection_create(fd);
 	if (client->connection == NULL)
