@@ -196,6 +196,13 @@ static void
 shm_pool_resize(struct wl_client *client, struct wl_resource *resource,
 		int32_t size)
 {
+#ifdef __MACH__
+    wl_resource_post_error(resource, WL_SHM_ERROR_INVALID_FD,
+                   "pool resize not supported");
+    return;
+#else
+
+
 	struct wl_shm_pool *pool = wl_resource_get_user_data(resource);
 	void *data;
 
@@ -216,6 +223,7 @@ shm_pool_resize(struct wl_client *client, struct wl_resource *resource,
 
 	pool->data = data;
 	pool->size = size;
+#endif
 }
 
 struct wl_shm_pool_interface shm_pool_interface = {
@@ -451,7 +459,11 @@ sigbus_handler(int signum, siginfo_t *info, void *context)
 	/* This should replace the previous mapping */
 	if (mmap(pool->data, pool->size,
 		 PROT_READ | PROT_WRITE,
+#ifdef __MACH__
+		 MAP_PRIVATE | MAP_FIXED | MAP_ANON,
+#else
 		 MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS,
+#endif
 		 0, 0) == (void *) -1) {
 		reraise_sigbus();
 		return;
